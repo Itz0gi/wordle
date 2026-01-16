@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
+
 using namespace std;
 
 const int MAX_LENGTH = 17;
@@ -35,12 +36,16 @@ bool isEqual(const char str1[], const char str2[]) {
 }
 
 void removeLine() {
+    if(cin.bad()) return;
     cin.clear();
     cin.ignore(100000, '\n');
 }
 
 bool accountExistsInFile(const char username[], const char password[], bool checkPassword) {
-    ifstream fin("users.txt");
+    ifstream fin;
+    fin.exceptions(ios::goodbit);
+    fin.open("users.txt");
+
     if (!fin) return false;
 
     char user[MAX_LENGTH], pass[MAX_LENGTH];
@@ -133,7 +138,10 @@ void readPassword(char password[]){   //register
 }
 
 void addUserToFile(const char username[], const char password[]){     //register
-    ofstream fout("users.txt", ios::app);
+    ofstream fout;
+    fout.exceptions(ios::goodbit);
+    fout.open("users.txt", ios::app);
+
     fout << username << " " << password << endl;
     fout.close();
 }
@@ -249,8 +257,11 @@ void menu(){
 }
 
 int countWords(){
-    ifstream fin("words.txt");
-    if(!fin){
+    ifstream fin;
+    fin.exceptions(ios::goodbit);
+    fin.open("words.txt");
+
+    if(!fin.is_open()){
         return 0;
     }
 
@@ -265,8 +276,12 @@ int countWords(){
     return count;
 }
 
-bool pickWordAtIndex(int i, char result[]) {
-    ifstream fin("words.txt");
+bool pickWordAtIndex (int i, char result[]) {
+    ifstream fin;
+    fin.exceptions(ios::goodbit);
+    fin.open("words.txt");
+
+    if (!fin.is_open()) return false;
     
     char word[WORD_LENGTH];
     int current = 0;
@@ -285,19 +300,20 @@ bool pickWordAtIndex(int i, char result[]) {
 
 }
 
-bool pickRandomWord(char result[]) {
+bool pickRandomWord (char result[]) {
     int wordCount = countWords();
+
     if (wordCount == 0) return false;
 
     int randomIndex = rand() % wordCount;
     return pickWordAtIndex(randomIndex, result);
 }
 
-bool isLower(char letter) {
+bool isLower (char letter) {
     return (letter >= 'a' && letter <= 'z');
 }
 
-bool isValidGuessFormat(const char guess[]) {
+bool isValidGuessFormat (const char guess[]) {
     for (int i = 0; i < 5; i++) {
         if (guess[i] == '\0') return false;
         if (!isLower(guess[i])) return false;
@@ -305,7 +321,7 @@ bool isValidGuessFormat(const char guess[]) {
     return guess[WORD_LENGTH-1] == '\0';
 }
 
-void readGuess(char guess[WORD_LENGTH]) {
+void readGuess (char guess[WORD_LENGTH]) {
     while (true) {
         cout << "Enter your guess (5 lowercase letters): " << endl;
         cin.getline(guess, WORD_LENGTH);
@@ -333,16 +349,16 @@ void processGuess(const char guess[WORD_LENGTH], const char word[WORD_LENGTH], i
 
     for (int i = 0; i < 5; i++) letter[i] = gray; //turns all to gray
 
-    for(int i = 0; i < 5; i++) {
-        if(guess[i] == word[i]){
+    for (int i = 0; i < 5; i++) {
+        if (guess[i] == word[i]){
             letter[i] = green; //finds green
             used[i] = true;
         }
     }
 
-    for(int i = 0; i < 5; i++){
-        for(int j = 0; j < 5; j++){
-            if(guess[i] == word[j] && letter[i] != green && used[j] == false){
+    for (int i = 0; i < 5; i++){
+        for (int j = 0; j < 5; j++){
+            if (guess[i] == word[j] && letter[i] != green && used[j] == false){
                 letter[i] = yellow; //finds yellow
                 used[j] = true;
                 break;
@@ -351,9 +367,21 @@ void processGuess(const char guess[WORD_LENGTH], const char word[WORD_LENGTH], i
     }
 }
 
+bool checkIfCorrect(const char guess[WORD_LENGTH], int letter[WORD_LENGTH-1]){
+    for (int i = 0; i < WORD_LENGTH-1; i++) {
+        if (letter[i] != 2) return false;
+    }
+    return true;
+}
+
 void startGame(){
     char word[WORD_LENGTH];
     
+    if (!pickRandomWord(word)) {
+        cout << "No words in the file" << endl;
+        return;
+    }
+
     if(pickRandomWord(word)){
         cout << word << endl;
         for(int i = 0; i < 6; i++) {
@@ -363,16 +391,55 @@ void startGame(){
             readGuess(guess);
             processGuess(guess, word, letter);
             for(int j = 0; j < 5; j++) cout << letter[j];
+            cout << endl;
+            if(checkIfCorrect(guess, letter)){
+                cout << "You won!" << endl;
+                return;
+            }
         }   
+    }
+    cout << "You lost" << endl;
+}
+
+bool playAgain() {
+    const int ANSWER_LENGTH = 2;
+    char input[ANSWER_LENGTH];
+
+    while (true) {
+        cout << "Would you like to play again? Answer with y for yes or n for no" << endl;
+        cin.getline(input, ANSWER_LENGTH);
+
+        if (cin.fail()) {
+            removeLine();
+            cout << "Invalid answer. Please answer with y or n" << endl;
+            continue;
+        }
+
+        if (input[0] == '\0') {
+            cout << "Invalid answer. Please answer with y or n" << endl;
+            continue;
+        }
+
+        if (input[0] == 'y' || input[0] == 'Y') return true;
+
+        if (input[0] == 'n' || input[0] == 'N') return false;
+        
+        cout << "Invalid answer. Please answer with y or n" << endl;
     }
 }
 
 int main(){
-    cin.exceptions(std::ios::goodbit);
+    cin.exceptions(ios::goodbit);
+    cout.exceptions(ios::goodbit);
+    cerr.exceptions(ios::goodbit);
     srand(time(0));
-    
     //menu();
-    startGame();
+    do {
+        startGame();
+    } while (playAgain());
+
+    cout << "Thanks for playing!" << endl;
     //readGuess();
+    
     return 0;
 }

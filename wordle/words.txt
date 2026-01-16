@@ -10,7 +10,7 @@ blush
 false
 apply
 criss
-cleark
+clear
 daily
 drive
 exist
