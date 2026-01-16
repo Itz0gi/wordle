@@ -314,7 +314,7 @@ bool isLower (char letter) {
 }
 
 bool isValidGuessFormat (const char guess[]) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < WORD_LENGTH-1; i++) {
         if (guess[i] == '\0') return false;
         if (!isLower(guess[i])) return false;
     }
@@ -341,23 +341,23 @@ void readGuess (char guess[WORD_LENGTH]) {
     }
 }
 
-void processGuess(const char guess[WORD_LENGTH], const char word[WORD_LENGTH], int letter[WORD_LENGTH-1]){
+void processGuess (const char guess[WORD_LENGTH], const char word[WORD_LENGTH], int letter[WORD_LENGTH-1]){
     const int gray = 0;
     const int yellow = 1;
     const int green = 2;
-    bool used[5] = {false};
+    bool used[WORD_LENGTH-1] = {false};
 
-    for (int i = 0; i < 5; i++) letter[i] = gray; //turns all to gray
+    for (int i = 0; i < WORD_LENGTH-1; i++) letter[i] = gray; //turns all to gray
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < WORD_LENGTH-1; i++) {
         if (guess[i] == word[i]){
             letter[i] = green; //finds green
             used[i] = true;
         }
     }
 
-    for (int i = 0; i < 5; i++){
-        for (int j = 0; j < 5; j++){
+    for (int i = 0; i < WORD_LENGTH-1; i++){
+        for (int j = 0; j < WORD_LENGTH-1; j++){
             if (guess[i] == word[j] && letter[i] != green && used[j] == false){
                 letter[i] = yellow; //finds yellow
                 used[j] = true;
@@ -374,6 +374,19 @@ bool checkIfCorrect(const char guess[WORD_LENGTH], int letter[WORD_LENGTH-1]){
     return true;
 }
 
+void colorGuess (const char guess[WORD_LENGTH], const int letter[WORD_LENGTH-1]) {
+    for (int i = 0; i < WORD_LENGTH-1; i++){
+        if (letter[i] == 2)
+            cout << "\033[42;30m" << guess[i] << " \033[0m";
+
+        else if (letter[i] == 1)
+            cout << "\033[43;30m" << guess[i] << " \033[0m";
+
+        else cout << "\033[47;30m" << guess[i] << " \033[0m";
+    }
+    cout << endl;
+}
+
 void startGame(){
     char word[WORD_LENGTH];
     
@@ -384,13 +397,14 @@ void startGame(){
 
     if(pickRandomWord(word)){
         cout << word << endl;
-        for(int i = 0; i < 6; i++) {
+        for(int i = 0; i < ATTEMPTS; i++) {
             char guess[WORD_LENGTH];
             int letter[WORD_LENGTH-1];
 
             readGuess(guess);
-            processGuess(guess, word, letter);
-            for(int j = 0; j < 5; j++) cout << letter[j];
+            processGuess(guess, word, letter); 
+            colorGuess(guess, letter);
+
             cout << endl;
             if(checkIfCorrect(guess, letter)){
                 cout << "You won!" << endl;
