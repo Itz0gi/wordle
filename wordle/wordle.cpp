@@ -9,10 +9,22 @@ const int MAX_LENGTH = 17;
 const int MIN_LENGTH = 3;
 const int WORD_LENGTH = 6;
 const int ATTEMPTS = 6;
+const int MAX_PLAYERS = 100;
 
-int strLen(const char str[]){
+struct Player {
+    char username[MAX_LENGTH];
+    int games;
+    int wins;
+};
+
+Player player[MAX_PLAYERS];
+int playerCount = 0;
+
+int strLen(const char str[]) {
     int i = 0;
-    while(str[i] != '\0') i++;
+    while (str[i] != '\0')
+        i++;
+
     return i;
 }
 
@@ -27,18 +39,61 @@ void strCopy(char dest[], const char src[], int maxLength) {
 
 bool isEqual(const char str1[], const char str2[]) {
     int i = 0;
-    if(strLen(str1) != strLen(str2)) return false;
-    while (str1[i] != '\0' && str2[i] != '\0'){
-        if(str1[i] != str2[i]) return false;
+    if (strLen(str1) != strLen(str2)) 
+        return false;
+
+    while (str1[i] != '\0' && str2[i] != '\0') {
+        if(str1[i] != str2[i]) 
+            return false;
+
         i++;
     }
     return true;
 }
 
+double winRate(const Player& player) {
+    if (player.games == 0) return 0;
+
+    return (double) player.wins / (double) player.games;
+}
+
+void swapPlayers(Player& a, Player& b) {
+    Player tmp = a;
+    a = b;
+    b = tmp;
+}
+
 void removeLine() {
-    if(cin.bad()) return;
+    if (cin.bad()) return;
     cin.clear();
     cin.ignore(100000, '\n');
+}
+
+void sortByGamesPlayed() {
+    for (int i = 0; i < playerCount - 1; i++) {
+        for (int j = 0; j < playerCount - 1 - i; j++) {
+            if (player[j].games < player[j + 1].games) {
+                swapPlayers(player[j], player[j + 1]);
+            }
+        }
+    }
+}
+
+void sortByWinRate() {
+    for (int i = 0; i < playerCount - 1; i++) {
+        for (int j = 0; j < playerCount - 1 - i; j++) {
+            double a = winRate(player[j]);
+            double b = winRate(player[j + 1]);
+
+            if (a < b) {
+                swapPlayers(player[j], player[j + 1]);
+            } 
+            
+            else if (a == b && player[j].games < player[j + 1].games) {
+                swapPlayers(player[j], player[j + 1]);
+            }
+        }
+    }
 }
 
 bool accountExistsInFile(const char username[], const char password[], bool checkPassword) {
@@ -46,7 +101,8 @@ bool accountExistsInFile(const char username[], const char password[], bool chec
     fin.exceptions(ios::goodbit);
     fin.open("users.txt");
 
-    if (!fin) return false;
+    if (!fin) 
+        return false;
 
     char user[MAX_LENGTH], pass[MAX_LENGTH];
 
@@ -93,21 +149,22 @@ bool isValidCredential(const char str[]) {  //login
 void readUsername(char username[]) {    //register
     cout << "Enter new username (at least 3 characters, no spaces): " << endl;
     
-    while(true){
+    while (true){
         
         cin.getline(username, MAX_LENGTH);
-        if(cin.fail()){
+
+        if (cin.fail()) {
             removeLine();
             cout << "Username is too long, please try again: " << endl;
             continue;
         }
 
-        if(!isValidCredential(username)) {
+        if (!isValidCredential(username)) {
             cout << "Username is too short or contains spaces. Try again (at least 3 characters, no spaces): " << endl;
             continue;
         }
 
-        if(checkAccountExistanceReg(username)) {
+        if (checkAccountExistanceReg(username)) {
             cout << "An account with this username already exists. Try again: " << endl;
             continue;
         }
@@ -116,19 +173,19 @@ void readUsername(char username[]) {    //register
     }
 }
 
-void readPassword(char password[]){   //register
+void readPassword(char password[]) {   //register
     cout << "Set your password: " << endl;
 
-    while(true){
+    while (true) {
         
         cin.getline(password, MAX_LENGTH);
-        if(cin.fail()) {
+        if (cin.fail()) {
             removeLine();
             cout << "Password is too long, please try again: " << endl;
             continue;
         }
 
-        if(!isValidCredential(password)) {
+        if (!isValidCredential(password)) {
             cout << "Password is too short or contains spaces. Try again (at least 3 characters, no spaces): " << endl;
             continue;
         }
@@ -137,7 +194,7 @@ void readPassword(char password[]){   //register
     }
 }
 
-void addUserToFile(const char username[], const char password[]){     //register
+void addUserToFile(const char username[], const char password[]) {     //register
     ofstream fout;
     fout.exceptions(ios::goodbit);
     fout.open("users.txt", ios::app);
@@ -179,7 +236,7 @@ void readLogin(char username[], char password[]) {    //login
     readLoginPassword(password);
 }
 
-bool processLogin(char currentUser[]){      //login
+bool processLogin(char currentUser[]) {      //login
     while (true) {
         char username[MAX_LENGTH];
         char password[MAX_LENGTH];
@@ -196,37 +253,71 @@ bool processLogin(char currentUser[]){      //login
     }
 }
 
-void login(){
-    char currentUser[MAX_LENGTH];
+void login(char currentUser[]) {
     processLogin(currentUser);
 }
 
-void registerNewUser(){
+void savePlayerToLeaderboard() {     //writes the player into the flie
+    ofstream fout;
+    fout.exceptions(ios::goodbit);
+    fout.open("leaderboard.txt");
+
+    if (!fout.is_open()) 
+        return;
+    
+    for (int i = 0; i < playerCount; i++) {
+        fout << player[i].username << " "
+             << player[i].games << " "
+             << player[i].wins << endl;
+    }
+    fout.close();
+}
+
+void addPlayerAtReg(const char username[]) {  //adds the registered user as a player
+    if (playerCount >= MAX_PLAYERS)
+        return;
+
+    strCopy(player[playerCount].username, username, MAX_LENGTH);
+    player[playerCount].games = 0;
+    player[playerCount].wins = 0;
+    playerCount++;
+}
+
+void registerNewUser(char currentUser[]) {
     char username[MAX_LENGTH];
     char password[MAX_LENGTH];
 
     readUsername(username);
     readPassword(password);
     addUserToFile(username, password);
+
+    addPlayerAtReg(username);
+    savePlayerToLeaderboard();
+
+    strCopy(currentUser, username, MAX_LENGTH);
     
     cout << "Your account has been registered successfully" << endl;
 }
 
-bool checkChoice(int choice){ //both
-    if(choice == 1){ 
-        login();
-        return true;
+int checkChoice(int choice, char currentUser[]) { //both
+
+    if (choice == 1){ 
+        login(currentUser);
+        return 1;
     }
     
-    if(choice == 2){
-        registerNewUser();
-        return true;
+    if (choice == 2){
+        registerNewUser(currentUser);
+        return 1;
     }
 
-    return false;
+    if (choice == 3)
+        return 2;
+
+    return 0;
 }
 
-void menu(){
+bool menu(char currentUser[]) {
     int choice;
 
     cout << "___________________________________________" << endl;
@@ -234,6 +325,7 @@ void menu(){
     cout << "___________________________________________" << endl;
     cout << "| Press 1 to login      |" << endl;
     cout << "| Press 2 to register   |" << endl;
+    cout << "| Press 3 to exit       |" << endl;
     cout << "Please enter your choice: " << endl;
 
     
@@ -248,27 +340,35 @@ void menu(){
 
         cin.ignore(100000, '\n');
 
-        if (!checkChoice(choice)) {
-            cout << "Invalid input. Please enter 1 or 2: " << endl;;
+        int result = checkChoice(choice, currentUser);
+
+        if (result == 0) {
+            cout << "Invalid input. Please enter 1, 2 or 3: " << endl;;
             continue;
         }
+
+        else if (result == 2) {
+            cout << "Goodbye!" << endl;
+            return false;
+        }
         break;
-    }   
+    }
+    return true; 
 }
 
-int countWords(){
+int countWords() {
     ifstream fin;
     fin.exceptions(ios::goodbit);
     fin.open("words.txt");
 
-    if(!fin.is_open()){
+    if (!fin.is_open()){
         return 0;
     }
 
     int count = 0;
     char word[WORD_LENGTH];
 
-    while(fin >> word){
+    while (fin >> word){
         count++;
     }
 
@@ -276,7 +376,7 @@ int countWords(){
     return count;
 }
 
-bool pickWordAtIndex (int i, char result[]) {
+bool pickWordAtIndex (const int i, char result[]) {
     ifstream fin;
     fin.exceptions(ios::goodbit);
     fin.open("words.txt");
@@ -286,8 +386,8 @@ bool pickWordAtIndex (int i, char result[]) {
     char word[WORD_LENGTH];
     int current = 0;
 
-    while(fin >> word) {
-        if(current == i) {
+    while (fin >> word) {
+        if (current == i) {
             strCopy(result, word, WORD_LENGTH);
             fin.close();
             return true;
@@ -309,14 +409,16 @@ bool pickRandomWord (char result[]) {
     return pickWordAtIndex(randomIndex, result);
 }
 
-bool isLower (char letter) {
+bool isLower (const char letter) {
     return (letter >= 'a' && letter <= 'z');
 }
 
 bool isValidGuessFormat (const char guess[]) {
     for (int i = 0; i < WORD_LENGTH-1; i++) {
-        if (guess[i] == '\0') return false;
-        if (!isLower(guess[i])) return false;
+        if (guess[i] == '\0') 
+            return false;
+        if (!isLower(guess[i]))
+            return false;
     }
     return guess[WORD_LENGTH-1] == '\0';
 }
@@ -341,7 +443,7 @@ void readGuess (char guess[WORD_LENGTH]) {
     }
 }
 
-void processGuess (const char guess[WORD_LENGTH], const char word[WORD_LENGTH], int letter[WORD_LENGTH-1]){
+void processGuess (const char guess[WORD_LENGTH], const char word[WORD_LENGTH], int letter[WORD_LENGTH-1]) {
     const int gray = 0;
     const int yellow = 1;
     const int green = 2;
@@ -350,15 +452,15 @@ void processGuess (const char guess[WORD_LENGTH], const char word[WORD_LENGTH], 
     for (int i = 0; i < WORD_LENGTH-1; i++) letter[i] = gray; //turns all to gray
 
     for (int i = 0; i < WORD_LENGTH-1; i++) {
-        if (guess[i] == word[i]){
+        if (guess[i] == word[i]) {
             letter[i] = green; //finds green
             used[i] = true;
         }
     }
 
-    for (int i = 0; i < WORD_LENGTH-1; i++){
-        for (int j = 0; j < WORD_LENGTH-1; j++){
-            if (guess[i] == word[j] && letter[i] != green && used[j] == false){
+    for (int i = 0; i < WORD_LENGTH-1; i++) {
+        for (int j = 0; j < WORD_LENGTH-1; j++) {
+            if (guess[i] == word[j] && letter[i] != green && used[j] == false) {
                 letter[i] = yellow; //finds yellow
                 used[j] = true;
                 break;
@@ -367,15 +469,17 @@ void processGuess (const char guess[WORD_LENGTH], const char word[WORD_LENGTH], 
     }
 }
 
-bool checkIfCorrect(const char guess[WORD_LENGTH], int letter[WORD_LENGTH-1]){
+bool checkIfCorrect(const char guess[WORD_LENGTH], int letter[WORD_LENGTH-1]) {
     for (int i = 0; i < WORD_LENGTH-1; i++) {
-        if (letter[i] != 2) return false;
+        if (letter[i] != 2) 
+            return false;
     }
+
     return true;
 }
 
 void colorGuess (const char guess[WORD_LENGTH], const int letter[WORD_LENGTH-1]) {
-    for (int i = 0; i < WORD_LENGTH-1; i++){
+    for (int i = 0; i < WORD_LENGTH-1; i++) {
         if (letter[i] == 2)
             cout << "\033[42;30m" << guess[i] << " \033[0m";
 
@@ -384,10 +488,37 @@ void colorGuess (const char guess[WORD_LENGTH], const int letter[WORD_LENGTH-1])
 
         else cout << "\033[47;30m" << guess[i] << " \033[0m";
     }
+
     cout << endl;
 }
 
-void startGame(){
+int findPlayer(const char username[]) {
+    for (int i = 0; i < playerCount; i++) {
+        if (isEqual(player[i].username, username))
+            return i;
+    }
+
+    return -1;
+}
+
+void updatePlayerAfterWin(const char currentUser[]) {
+    int i = findPlayer(currentUser);
+
+    if (i == -1) return;
+
+    player[i].games++;
+    player[i].wins++;
+}
+
+void updatePlayerAfterLoss(const char currentUser[]) {
+    int i = findPlayer(currentUser);
+
+    if (i == -1) return;
+
+    player[i].games++;
+}
+
+void startGame(const char currentUser[]) {
     char word[WORD_LENGTH];
     
     if (!pickRandomWord(word)) {
@@ -395,9 +526,8 @@ void startGame(){
         return;
     }
 
-    if(pickRandomWord(word)){
-        cout << word << endl;
-        for(int i = 0; i < ATTEMPTS; i++) {
+    if (pickRandomWord(word)){
+        for (int i = 0; i < ATTEMPTS; i++) {
             char guess[WORD_LENGTH];
             int letter[WORD_LENGTH-1];
 
@@ -406,12 +536,16 @@ void startGame(){
             colorGuess(guess, letter);
 
             cout << endl;
-            if(checkIfCorrect(guess, letter)){
+            if (checkIfCorrect(guess, letter)) {
                 cout << "You won!" << endl;
+                updatePlayerAfterWin(currentUser);
+                savePlayerToLeaderboard();
                 return;
             }
         }   
     }
+    updatePlayerAfterLoss(currentUser);
+    savePlayerToLeaderboard();
     cout << "You lost" << endl;
 }
 
@@ -434,11 +568,99 @@ bool playAgain() {
             continue;
         }
 
-        if (input[0] == 'y' || input[0] == 'Y') return true;
+        if (input[0] == 'y' || input[0] == 'Y') 
+            return true;
 
-        if (input[0] == 'n' || input[0] == 'N') return false;
+        if (input[0] == 'n' || input[0] == 'N') 
+            return false;
         
         cout << "Invalid answer. Please answer with y or n" << endl;
+    }
+}
+
+void loadLeaderboard() {
+    playerCount = 0;
+
+    ifstream fin;
+    fin.exceptions(ios::goodbit);
+    fin.open("leaderboard.txt");
+
+    if (!fin.is_open()) return;
+
+    while (playerCount < MAX_PLAYERS) {
+        char name[MAX_LENGTH];
+        int games, wins;
+
+        if (!(fin >> name >> games >> wins))
+            break;
+
+        strCopy(player[playerCount].username, name, MAX_LENGTH);
+        player[playerCount].games = games;
+        player[playerCount].wins = wins;
+
+        playerCount++;
+    }
+
+    fin.close();
+}
+
+void printLeaderboard() {
+    cout << "-------------------- LEADERBOARD --------------------" << endl;
+    cout << "User             Games   Wins   Winrate" << endl;
+    cout << "-----------------------------------------------------" << endl;
+
+    for (int i = 0; i < playerCount; i++) {
+        double winrate = winRate(player[i]) * 100.0;
+
+        cout << player[i].username;
+
+        int nameLen = strLen(player[i].username);
+        for (int i = nameLen; i < 16; i++) 
+            cout << " ";
+
+        cout << player[i].games << "       "
+             << player[i].wins << "      "
+             << (int)winrate << "%" << endl;
+    }
+
+    cout << "-----------------------------------------------------" << endl;
+}
+
+void leaderboardMenu() {
+    while (true) {
+        int choice;
+
+        cout << "How would you like for the leaderboard to be sorted?" << endl;
+        cout << "Sort by games played - Press 1" << endl;
+        cout << "Sort by winrate - Press 2" << endl;
+        cout << "I don't want to see the leaderboard - Press 3" << endl;
+        cout << "Please enter your choice: ";
+
+        cin >> choice;
+        if (!cin) {
+            cin.clear();
+            cin.ignore(100000, '\n');
+            cout << "Invalid input. Try again.\n";
+            continue;
+        }
+        cin.ignore(100000, '\n');
+
+        if(choice == 1) {
+            sortByGamesPlayed();
+            printLeaderboard();
+            return;
+        }
+
+        if(choice == 2) {
+            sortByWinRate();
+            printLeaderboard();
+            return;
+        }
+
+        if(choice == 3)
+            return;
+
+        else cout << "Invalid choice. Please enter 1, 2 or 3" << endl;
     }
 }
 
@@ -446,14 +668,22 @@ int main(){
     cin.exceptions(ios::goodbit);
     cout.exceptions(ios::goodbit);
     cerr.exceptions(ios::goodbit);
+    
+    char currentUser[MAX_LENGTH];
+
     srand(time(0));
-    //menu();
+    loadLeaderboard();
+
+    if(!menu(currentUser))
+        return 0;
+
     do {
-        startGame();
+        startGame(currentUser);
     } while (playAgain());
 
+    leaderboardMenu();
+
     cout << "Thanks for playing!" << endl;
-    //readGuess();
     
     return 0;
 }
